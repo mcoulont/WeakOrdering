@@ -13,7 +13,10 @@ Definition Involutive {T} (f : T->T) :=
   forall x, f (f x) = x.
 
 
-(* Some formalization for https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings *)
+(*
+  Some formalization for
+  https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings
+*)
 
 Context {A : Type}.
 
@@ -220,8 +223,8 @@ Definition preference_relation (R: relation A) :=
 
 
 (*
-A characterization of preference relations used by Allan Gibbard in
-https://www.eecs.harvard.edu/cs286r/courses/fall11/papers/Gibbard73.pdf
+  A characterization of preference relations used by Allan Gibbard in
+  https://www.eecs.harvard.edu/cs286r/courses/fall11/papers/Gibbard73.pdf
 *)
 
 Definition ordering (P: relation A) :=
