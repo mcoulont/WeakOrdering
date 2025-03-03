@@ -1,16 +1,10 @@
 
 From Coq Require Import Classical.
 From Coq Require Import Logic.FunctionalExtensionality.
-From Coq Require Import Logic.ClassicalFacts.
 From Coq Require Import Logic.PropExtensionality.
 From Coq Require Import Relations.Relation_Definitions.
 From Coq Require Import Classes.RelationClasses.
-
-
-(* Not found in Coq's standard library *)
-
-Definition Involutive {T} (f : T->T) :=
-  forall x, f (f x) = x.
+From Coq Require Import Program.Basics.
 
 
 (*
@@ -18,27 +12,29 @@ Definition Involutive {T} (f : T->T) :=
   https://en.wikipedia.org/wiki/Weak_ordering#Strict_weak_orderings
 *)
 
-Context {A : Type}.
 
-Class StrongConnected (R : relation A) :=
-  strong_connectedness : forall x y : A, R x y \/ R y x.
+(* Not found in Coq's standard library *)
 
-Class TotalPreorder (R : relation A) : Prop := {
-  TotalPreOrder_Transitive :: Transitive R;
-  TotalPreOrder_StrongConnected :: StrongConnected R
-}.
+Definition Involutive {T} (f : T->T) :=
+  forall x, f (f x) = x.
 
-Lemma total_preorder_is_reflexive (R: relation A) :
-  TotalPreorder R -> Reflexive R.
+(* flip just flips the arguments of a relation *)
+Lemma flip_rewrite {A B C} (f : A -> B -> C) x y :
+  (flip f) x y = f y x.
 Proof.
-  intro.
-  intro.
-  destruct H eqn:TP.
-  specialize (TotalPreOrder_StrongConnected x x).
-  tauto.
+  reflexivity.
 Qed.
 
-Lemma relation_complement_involutive :
+(* Lemma flip_involutive {A B : Type} :
+  Involutive (@flip A A B).
+Proof.
+  unfold Involutive. reflexivity.
+Qed. *)
+
+Context {A : Type}.
+(* Variable A : Type. *)
+
+Lemma complement_involutive :
   Involutive (@complement A).
 Proof.
   intro.
@@ -51,15 +47,77 @@ Proof.
   tauto.
 Qed.
 
-Definition comparable (P: relation A) (x y: A) :=
-  P x y \/ P y x.
 
-Definition incomparable (P: relation A) (x y: A) :=
-  ~ comparable P x y.
+(* Non-strict orders *)
+
+Class StrongConnected (R : relation A) :=
+  strong_connected : forall x y : A, R x y \/ R y x.
+
+(* flip just flips the arguments of a relation *)
+Lemma flip_StrongConnected (R : relation A) :
+  StrongConnected R <-> StrongConnected (flip R).
+Proof.
+  split.
+    - intro. unfold StrongConnected. intros x y. destruct H with (x:=x) (y:=y).
+      * right. unfold flip. apply H0.
+      * left. unfold flip. apply H0.
+    - intro. unfold StrongConnected. intros x y. destruct H with (x:=x) (y:=y).
+      * right. unfold flip. apply H0.
+      * left. unfold flip. apply H0.
+Qed.
+
+Class TotalPreorder (R : relation A) : Prop := {
+  TotalPreOrder_Transitive : Transitive R;
+  TotalPreOrder_StrongConnected : StrongConnected R
+}.
+
+Lemma total_preorder_is_reflexive (R: relation A) :
+  TotalPreorder R -> Reflexive R.
+Proof.
+  intro.
+  intro.
+  destruct H eqn:TP.
+  specialize (TotalPreOrder_StrongConnected x x).
+  tauto.
+Qed.
+
+Definition comparable (R: relation A) (x y: A) :=
+  R x y \/ R y x.
+
+Definition incomparable (R: relation A) (x y: A) :=
+  ~ comparable R x y.
+
+Definition preference_relation (R: relation A) :=
+  TotalPreorder R.
+
+Lemma filp_TotalPreorder (R: relation A) :
+  TotalPreorder R <-> TotalPreorder (flip R).
+Proof.
+  split.
+  - intro. destruct H. split.
+    * apply flip_Transitive. apply TotalPreOrder_Transitive0.
+    * apply flip_StrongConnected. apply TotalPreOrder_StrongConnected0.
+  - intro. destruct H. split.
+    * apply flip_Transitive. apply TotalPreOrder_Transitive0.
+    * apply flip_StrongConnected. apply TotalPreOrder_StrongConnected0.
+Qed.
+
+(* Strict orders *)
 
 Class TransitiveIncomparability (P : relation A) :=
   transitive_incomparability : forall x y z: A,
   ((incomparable P x y /\ incomparable P y z) -> incomparable P x z).
+
+Lemma flip_TransitiveIncomparability (P: relation A) :
+  TransitiveIncomparability P <-> TransitiveIncomparability (flip P).
+Proof.
+  unfold TransitiveIncomparability. unfold incomparable. unfold comparable.
+  repeat rewrite flip_rewrite. split.
+  - intro. intros x y z. intro.
+    apply H with (x:=z) (y:=y) (z:=x). tauto.
+  - intro. intros x y z. intro.
+    apply H with (x:=z) (y:=y) (z:=x). tauto.
+Qed.
 
 Class StrictWeakOrdering (P : relation A) : Prop := {
   StrictWeakOrdering_Irreflexive :: Irreflexive P ;
@@ -67,7 +125,23 @@ Class StrictWeakOrdering (P : relation A) : Prop := {
   StrictWeakOrdering_TransitiveIncomparability :: TransitiveIncomparability P
 }.
 
-Lemma strict_weak_ordering_iff_complement_total_preorder (P: relation A) :
+Lemma flip_StrictWeakOrdering (P: relation A) :
+  StrictWeakOrdering P <-> StrictWeakOrdering (flip P).
+Proof.
+  split.
+  - intro. destruct H. split.
+    * apply flip_Irreflexive. apply StrictWeakOrdering_Irreflexive0.
+    * apply flip_Transitive. apply StrictWeakOrdering_Transitive0.
+    * apply flip_TransitiveIncomparability. apply StrictWeakOrdering_TransitiveIncomparability0.
+  - intro. destruct H. split.
+    * apply flip_Irreflexive. apply StrictWeakOrdering_Irreflexive0.
+    * apply flip_Transitive. apply StrictWeakOrdering_Transitive0.
+    * apply flip_TransitiveIncomparability. apply StrictWeakOrdering_TransitiveIncomparability0.
+Qed.
+
+(* Relationship between strict and non-strict orders *)
+
+Lemma StrictWeakOrdering_iff_complement_TotalPreorder (P: relation A) :
   StrictWeakOrdering P <-> TotalPreorder (complement P).
 Proof.
   split.
@@ -280,12 +354,12 @@ Proof.
   }
 Qed.
 
-Corollary total_preorder_iff_complement_strict_weak_ordering (R: relation A) :
+Corollary TotalPreorder_iff_complement_StrictWeakOrdering (R: relation A) :
   TotalPreorder R <-> StrictWeakOrdering (complement R).
 Proof.
   assert (TotalPreorder (complement (complement R)) <-> TotalPreorder R).
   - assert (Involutive (@complement A)).
-    + apply relation_complement_involutive.
+    + apply complement_involutive.
     + assert (complement (complement R) = R).
       * apply H.
       * assert (TotalPreorder(complement (complement R)) = TotalPreorder R).
@@ -295,12 +369,54 @@ Proof.
         tauto.
   - apply propositional_extensionality in H.
     rewrite <- H.
-    pose proof (strict_weak_ordering_iff_complement_total_preorder (complement R)).
+    pose proof (StrictWeakOrdering_iff_complement_TotalPreorder (complement R)).
     tauto.
 Qed.
 
-Definition preference_relation (R: relation A) :=
-  TotalPreorder R.
+Definition switch_strictness (R : relation A) : relation A :=
+  complement (flip R).
+
+Lemma switch_strictness_fundamental_property (R : relation A) (a b : A) :
+  switch_strictness R a b = ~ R b a.
+Proof.
+  unfold switch_strictness. unfold complement. unfold flip. reflexivity.
+Qed.
+
+Lemma switch_strictness_involutive (R : relation A) :
+  Involutive switch_strictness.
+Proof.
+  unfold switch_strictness. unfold Involutive. intro. apply functional_extensionality.
+  intro. unfold flip. unfold complement. simpl. apply functional_extensionality.
+  intro. assert (Decidable.decidable (x x0 x1)).
+  { apply classic. }
+  apply propositional_extensionality. rewrite Decidable.not_not_iff.
+  reflexivity. apply H.
+Qed.
+
+Lemma strict_implies_non_strict (R: relation A) (a b: A) :
+  TotalPreorder R -> (switch_strictness R) a b -> R a b.
+Proof.
+  intro. unfold switch_strictness. unfold complement. unfold flip.
+  destruct H. assert (R a b \/ R b a).
+  { apply TotalPreOrder_StrongConnected0. }
+  destruct H.
+  - tauto.
+  - tauto.
+Qed.
+
+Lemma StrictWeakOrdering_iff_switch_strictness_TotalPreorder (P: relation A) :
+  StrictWeakOrdering P <-> TotalPreorder (switch_strictness P).
+Proof.
+  rewrite StrictWeakOrdering_iff_complement_TotalPreorder. unfold switch_strictness.
+  rewrite complement_inverse. rewrite filp_TotalPreorder. tauto.
+Qed.
+
+Lemma TotalPreorder_iff_switch_strictness_StrictWeakOrdering (R: relation A) :
+  TotalPreorder R <-> StrictWeakOrdering (switch_strictness R).
+Proof.
+  rewrite TotalPreorder_iff_complement_StrictWeakOrdering. unfold switch_strictness.
+  rewrite flip_StrictWeakOrdering. tauto.
+Qed.
 
 
 (*
@@ -338,7 +454,7 @@ Proof.
       tauto.
 Qed.
 
-Lemma no_2_cycle_imlies_irreflexive (P: relation A) :
+Lemma no_2_cycle_implies_irreflexive (P: relation A) :
   no_2_cycle P -> Irreflexive P.
 Proof.
   intro.
